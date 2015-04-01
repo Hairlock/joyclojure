@@ -71,5 +71,89 @@
   (* pi r-squared))
 
 
+;; recur - used for tail recursion, a form is in a tail
+;; position when its value may be the return value of
+;; the entire expression
+
+(defn print-down-from
+  [x]
+  (when (pos? x)
+    (println x)
+    (recur (dec x))))
+
+(print-down-from 2)
+
+(defn sum-down-from
+  [sum x]
+  (if (pos? x)
+    (recur (+ sum x) (dec x))
+    sum))
+
+(sum-down-from 0 3)
+
+;; loop - used to loop to a point inside a fn instead of
+;; top the top
+
+(defn sum-down-from
+  [initial-x]
+  (loop [sum 0, x initial-x]
+    (if (pos? x)
+      (recur (+ sum x) (dec x))
+      sum)))
+
+(sum-down-from 5)
+
+;; Evaluation
+(cons 1 [2 3])
+1
+[2 3]
+
+;; Quoting
+(def age 9)
+(quote age)
+(cons 1 (quote (2 3)))
+(cons 1 '(2 3))
+
+;; Syntax-quote - prevents its args and subforms from being
+;; evaluated
+
+`(1 2 3)
+
+;; Symbol auto-qualification
+clojure.core/map
+`map
+`is-always-right
+`(map even? [1 2 3])
+
+;;Unquote - demarcates specific forms as requiring evaluation
+`(+ 10 (* 3 2))
+`(+ 10 ~(* 3 2))
+
+;;Unquote splicing - @ means to splice rather than insert as
+;; a nested list
+(let [x '(2 3)] `(1 ~@x))
+
+;; Auto-gensym - append # to generate unique symbol name
+`potion#
+
+;; Host language interop
+java.util.Locale/JAPAN
+(Math/sqrt 9)
+
+;; Creating instances
+(new java.awt.Point 0 1)
+
+(java.util.HashMap.{"foo" 42 "bar" 9 "baz" "quux"})
+
+
+
+
+
+
+
+
+
+
+
 
 
