@@ -145,8 +145,75 @@ java.util.Locale/JAPAN
 
 (java.util.HashMap.{"foo" 42 "bar" 9 "baz" "quux"})
 
+(.-x (java.awt.Point. 10 20))
+
+(.divide (java.math.BigDecimal. "42") 2M)
+
+;; Setting instance fields
+(let [origin (java.awt.Point. 0 0)]
+  (set! (.-x origin) 15)
+  (str origin))
+
+;; .. macro
+;; new java.util.Date().toString().endsWith("2014")
+(.endsWith (.toString (java.util.Date.)) "2015")
+(.. (java.util.Date.) toString (endsWith "2015"))
+
+;;doto macro - initialize a fresh instance
+;; java.util.HashMap props = new java.util.HashMap();
+;; props.put("Home", "/home/me");
+(doto (java.util.HashMap.)
+  (.put "Home" "/home/me"))
+
+;; Exception handling
+;;(throw (Exception. "Throwing..."))
+
+(defn throw-catch
+  [f]
+  [(try
+     (f)
+     (catch ArithmeticException e "Don't divide by 0")
+     (catch Exception e (str "You are so bad" (.getMessage e)))
+     (finally (println "returning... ")))])
+
+(throw-catch #(/ 10 5))
+
+;; Namespaces
+(ns joy.ch2)
+
+(defn report-ns []
+  (str "The current namespace is " *ns*))
+
+(report-ns)
+
+;; loading ns
+(ns joy.req
+  (:require clojure.set :as s))
+
+(s/intersection #{1 2 3} #{3 4 5})
+
+(ns joy.use-ex
+  (:require [clojure.string :refer (capitalize)]))
+
+(map capitalize ["kilgore" "trout"])
+
+(ns joy.ch1
+  (:refer joy.ch2))
+
+(ns joy.another
+  (:refer clojure.set :rename {union onion}))
+
+(onion #{1 2} #{4 5})
 
 
+;; Import unqualified java classes - fully qualified ones
+;; are always available
+(ns joy.java
+  (:import [java.util HashMap]
+           [java.util.concurrent.atomic AtomicLong]))
+
+(HashMap. {"happy?" true})
+(AtomicLong. 42)
 
 
 
