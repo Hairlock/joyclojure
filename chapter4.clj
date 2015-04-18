@@ -90,7 +90,7 @@
     :blowfish          (println "not sure what to do")))
 
 (ns crypto)
-(user/do-blofish :blowfish)
+(user/do-blowfish :blowfish)
 
 ;; Symbols - words that refer to other things
 ;; use quote operator to refer to them directly
@@ -117,4 +117,12 @@
 
 (best > [1 3 4 2 7 5 3])
 
+;; Regexes in clojure
+#"an example regex"
+(class #"example")
+
+(re-seq #"\w+" "one-two/three")
+
+;; Capturing group causes each returned item to be a vector
+(re-seq #"\w*(\w)" "one-two/three")
 
