@@ -114,3 +114,7 @@
    (mapping inc)))
 
 (reduce (xform2 conj) [] (range 10))
+
+(reduce (xform2 conj) [1 5 17] 12)
+
+;; Transducers can work across core async channels
