@@ -127,3 +127,169 @@
 
 ;;(finicky put-things {:meat "chicken"})
 
+;; A closure is a function that has access to locals from the
+;; context where it was created
+(def times-two
+  (let [x 2]
+    (fn [y] (* y x))))
+
+(times-two 2)
+
+(def add-and-get
+  (let [ai (java.util.concurrent.atomic.AtomicInteger.)]
+    (fn [y] (.addAndGet ai y))))
+
+(add-and-get 7)
+
+(defn times-n [n]
+  (let [x n]
+    (fn [y] (* y x))))
+
+(times-n 4)
+
+(def times-four (times-n 4))
+
+(times-four 10)
+
+(defn times-n-2 [n]
+  (fn [y] (* y n)))
+
+(defn divisible [denom]
+  (fn [num]
+    (zero? (rem num denom))))
+
+;; Don't need to store a closure in a var, create and call
+;; immediately
+((divisible 3) 6)
+
+;; Anywhere a function is expected a closure can be used instead
+(filter even? (range 10))
+
+(filter (divisible 4) (range 10))
+
+(defn filter-divisible [denom s]
+  (filter #(zero? (rem % denom)) s))
+
+(filter-divisible 4 (range 10))
+
+;; Robot
+
+(def bearings [{:x 0, :y 1} ; north
+               {:x 1, :y 0} ; east
+               {:x 0, :y -1} ;south
+               {:x -1, :y 0} ; west
+               ])
+
+(defn forward [x y bearing-num]
+  [(+ x (:x (bearings bearing-num)))
+   (+ y (:y (bearings bearing-num)))])
+
+;; Starting with bearing 0 (north) at 5,5 and going one step
+(forward 5 5 0)
+(forward 5 5 1) ;; east
+(forward 5 5 2) ;; east
+
+(defn bot [x y bearing-num]
+  {:coords [x y]
+   :bearing ([:north :east :south :west] bearing-num)
+   :forward (fn [] (bot (+ x (:x (bearings bearing-num)))
+                        (+ y (:y (bearings bearing-num)))
+                        bearing-num))
+   :turn-right (fn [] (bot x y (mod (+ 1 bearing-num) 4)))
+   :turn-left (fn [] (bot x y (mod (- 1 bearing-num) 4)))})
+
+(:coords (bot 5 5 0))
+
+(:bearing (bot 5 5 0))
+
+(:coords ((:forward (bot 5 5 0))))
+
+(:bearing ((:forward ((:forward ((:turn-right (bot 5 5 0))))))))
+(:coords ((:forward ((:forward ((:turn-right (bot 5 5 0))))))))
+
+(defn mirror-bot [x y bearing-num]
+  {:coords   [x y]
+   :bearing  ([:north :east :south :west] bearing-num)
+   :forward  (fn [] (mirror-bot (- x (:x (bearings bearing-num)))
+                                (- y (:y (bearings bearing-num)))
+                                bearing-num))
+   :turn-right (fn [] (mirror-bot x y (mod (- 1 bearing-num) 4)))
+   :turn-left (fn [] (mirror-bot x y (mod (+ 1 bearing-num) 4)))})
+
+;; Thinking recursively
+(defn pow [base exp]
+  (if (zero? exp)
+    1
+    (* base (pow base (dec exp)))))
+
+(pow 2 10)
+;; (pow 2N 10000)
+
+(defn pow2 [base exp]
+  (letfn [(kapow [base exp acc]
+            (if (zero? exp)
+              acc
+              (recur base (dec exp) (* base acc))))]
+    (kapow base exp 1)))
+
+(pow2 2N 10000)
+
+(def simple-metric {:meter 1,
+                    :km 1000,
+                    :cm 1/100,
+                    :mm [1/10 :cm]})
+
+(defn convert [context descriptor]
+  (reduce (fn [result [mag unit]]
+            (+ result
+               (let [val (get context unit)]
+                 (if (vector? val)
+                   (* mag (convert context val))
+                   (* mag val)))))
+          0
+          (partition 2 descriptor)))
+ 
+(convert simple-metric [50 :cm])
+(float (convert simple-metric [3 :km 10 :meter 80 :cm 10 :mm]))
+
+(get simple-metric :km)
+
+;; Tail call optimization
+
+(defn gcd [x y]
+  (cond
+   (> x y) (gcd (- x y) y)
+   (< x y) (gcd x (- y x))
+   :else x))
+
+(defn elevator [commands]
+  (letfn
+      [(ff-open [[_ & r]]
+         "When the elevator is open on the 1st floor
+          it can either close or be done."
+         #(case _
+            :close (ff-closed r)
+            :done  true
+            false))
+       (ff-closed [[_ & r]]
+         "When the elevator is closed on the 1st floor
+          it can either open or go up"
+         #(case _
+            :open  (ff-open r)
+            :up    (sf-closed r)
+            false))
+       (sf-closed [[_ & r]]
+         "When the elevator is closed on the 2nd floor
+          it can either go down or open."
+         #(case _
+            :down  (ff-closed r)
+            :open  (sf-open r)
+            false))
+       (sf-open [[_ & r]]
+         "When the elevator is open on the 2nd floor
+          it can either close or be done."
+         #(case _
+            :close (sf-closed r)
+            :done true
+            false))]
+    (trampoline ff-open commands)))
