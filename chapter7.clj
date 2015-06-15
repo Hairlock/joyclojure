@@ -293,3 +293,114 @@
             :done true
             false))]
     (trampoline ff-open commands)))
+
+;; Continuation passing style
+;; Hybrid between recursion and mutual recursion. Viewed in terms
+;; of up to three functions.
+;;    - Accept: decides when a computation should terminate
+;;    - Return: wraps the return values
+;;    - Continuation: Provides the next step in the computation
+
+(defn fac-cps [n k]
+  (letfn [(cont [v] (k (* v n)))]
+    (if (zero? n)
+      (k 1)
+      (recur (dec n) cont))))
+
+(defn fac [n]
+  (fac-cps n identity))
+
+(fac 10)
+
+(defn mk-cps [accept? kend kont]
+  (fn [n]
+    ((fn [n k]
+       (let [cont (fn [v]
+                    (k ((partial kont v) n)))]
+         (if (accept? n)
+           (k 1)
+           (recur (dec n) cont))))
+     n kend)))
+
+(def fac
+  (mk-cps zero?
+          identity
+          #(* %1 %2)))
+
+(fac 10)
+
+(def tri
+  (mk-cps #(== 1 %)
+          identity
+          #(+ %1 %2)))
+
+(tri 10)
+
+;; Not best practise
+
+(def world [[  1   1   1   1   1 ]
+            [ 999 999 999 999  1 ]
+            [ 1  1   1   1   1   ]
+            [ 1 999 999 999 999  ]
+            [ 1  1   1   1   1]  ])
+
+(defn min-by [f coll]
+  (when (seq coll)
+    (reduce (fn [min other]
+              (if (> (f min) (f other))
+                other
+                min))
+            coll)))
+
+(defn neighbors
+  [size yx] (neighbors [[-1 0] [1 0] [0 -1] [0 1]]
+                       size
+                       yx))
+
+(defn path-cost [node-cost cheapest-nbr]
+  (+ node-cost
+     (or (:cost cheapest-nbr) 0)))
+
+(defn estimate-cost [step-cost-est size y x]
+  (* step-cost-est
+     (- (+ size size) y x 2)))
+
+(defn total-cost [newcost step-cost-est size y x]
+  (+ newcost
+     (estimate-cost step-cost-est size y x)))
+
+
+(defn astar [start-yx step-est cell-costs]
+  (let [size (count cell-costs)]
+    (loop [steps 0
+           routes (vec (replicate size (vec (replicate size nil))))
+           work-todo (sorted-set [0 start-yx])]
+      (if (empty? work-todo)
+        [(peek (peek routes)) :steps steps]
+        (let [[_ yx :as work-item] (first work-todo)
+              rest-work-todo (disj work-todo work-item)
+              nbr-yxs (neighbors size yx)
+              cheapest-nbr (min-by :cost
+                                   (keep #(get-in routes %)
+                                         nbr-yxs))
+              newcost (path-cost (get-in cells-costs yx)
+                                 cheapest-nbr)
+              oldcost (:cost (get-in routes yx))]
+          (if (and oldcost (>= newcost oldcost))
+            (recur (inc steps) routes rest-work-todo)
+            (recur (inc steps)
+                   (assoc-in routes yx
+                             {:cost newcost
+                              :yxs (conj (:yxs cheapest-nbr [])
+                                         yx)})
+                   (into rest-work-todo
+                         (map
+                          (fn [w]
+                            (let [[y x] w]
+                              [(total-cost newcost step-est size y x) w]))
+                          nbr-yxs)))))))))
+
+(astar [0 0]
+       900
+       world)
+
